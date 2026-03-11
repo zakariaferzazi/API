@@ -141,7 +141,7 @@ def get_remaining_characters(api_key: str) -> int:
 # ── Core logic ────────────────────────────────────────────────────────────────
 def check_and_switch() -> None:
     log.info("─" * 60)
-    log.info("Running ElevenLabs balance check...")
+    log.info("Running ElevenLabs balance check..")
 
     # Always pull latest before reading to avoid acting on stale data test
     git_pull_rebase()
