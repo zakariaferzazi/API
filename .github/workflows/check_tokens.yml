@@ -1,0 +1,55 @@
+name: Check ElevenLabs Token Balance
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 minutes
+  workflow_dispatch:           # allow manual trigger from GitHub UI
+
+# Prevent two runs from racing on the same commit.
+# cancel-in-progress: false means a new run queues instead of cancelling
+# the in-progress one, so no push is ever silently dropped.
+concurrency:
+  group: check-tokens
+  cancel-in-progress: false
+
+jobs:
+  check-tokens:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # required to commit and push voice_changer.json
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          # Use a PAT instead of GITHUB_TOKEN if you need to trigger
+          # downstream workflows from the push made by this action.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # api_keys.json is gitignored. Recreate it here from a repository secret.
+      # Go to: Settings → Secrets and variables → Actions → New repository secret
+      # Name : API_KEYS_JSON
+      # Value: the full JSON content, e.g. {"api_keys":["sk_key1","sk_key2",...]}
+      - name: Create api_keys.json from secret
+        env:
+          API_KEYS_JSON: ${{ secrets.API_KEYS_JSON }}
+        run: echo "$API_KEYS_JSON" > api_keys.json
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run token balance check
+        run: python check_tokens.py
