@@ -44,7 +44,12 @@ jobs:
       - name: Create api_keys.json from secret
         env:
           API_KEYS_JSON: ${{ secrets.API_KEYS_JSON }}
-        run: echo "$API_KEYS_JSON" > api_keys.json
+        run: |
+          if [ -z "$API_KEYS_JSON" ]; then
+            echo "::error::API_KEYS_JSON secret is not set. Go to Settings → Secrets and variables → Actions and add it."
+            exit 1
+          fi
+          echo "$API_KEYS_JSON" > api_keys.json
 
       - name: Configure git identity
         run: |

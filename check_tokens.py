@@ -37,12 +37,20 @@ def run_git(*args: str) -> tuple[int, str, str]:
 def git_pull_rebase() -> None:
     """Pull latest remote changes with rebase to avoid stale reads."""
     log.info("Pulling latest remote changes (--rebase)...")
+    # Stash any tracked-file changes (e.g. files written by CI) so rebase can proceed cleanly
+    _, stash_out, _ = run_git("stash")
+    stashed = "No local changes to save" not in stash_out
+
     code, out, err = run_git("pull", "--rebase", "origin", "HEAD")
     if code != 0:
-        # Log but don't abort — could simply be no remote configured locally
         log.warning(f"git pull --rebase exited {code}: {err or out}")
     else:
         log.info(f"Pull: {out or 'already up to date'}")
+
+    if stashed:
+        pop_code, _, pop_err = run_git("stash", "pop")
+        if pop_code != 0:
+            log.warning(f"git stash pop failed: {pop_err}")
 
 
 def git_commit_and_push(message: str) -> None:
