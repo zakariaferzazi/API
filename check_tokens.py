@@ -141,7 +141,7 @@ def check_and_switch() -> None:
     log.info("─" * 60)
     log.info("Running ElevenLabs balance check...")
 
-    # Always pull latest before reading to avoid acting on stale data
+    # Always pull latest before reading to avoid acting on stale data test
     git_pull_rebase()
 
     try:
@@ -155,7 +155,7 @@ def check_and_switch() -> None:
     all_keys: list = api_keys_data.get("api_keys", [])
 
     if not all_keys:
-        log.error("No API keys found in api_keys.json.")
+        log.error("No API keys found in api_keys.json.") 
         sys.exit(1)
 
     if not current_key:
