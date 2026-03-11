@@ -53,18 +53,20 @@ def git_pull_rebase() -> None:
             log.warning(f"git stash pop failed: {pop_err}")
 
 
-def git_commit_and_push(message: str) -> None:
+def git_commit_and_push(message: str, *rel_paths: str) -> None:
     """
-    Stage voice_changer.json, commit, then push.
+    Stage one or more files, commit, then push.
     On push conflict (non-fast-forward), rebases on the remote and retries.
     Aborts the whole push gracefully after MAX_PUSH_RETRIES failures.
     """
-    rel_path = VOICE_CHANGER_PATH.relative_to(BASE_DIR).as_posix()
+    if not rel_paths:
+        rel_paths = (VOICE_CHANGER_PATH.relative_to(BASE_DIR).as_posix(),)
 
-    code, _, err = run_git("add", rel_path)
-    if code != 0:
-        log.error(f"git add failed: {err}")
-        return
+    for rel_path in rel_paths:
+        code, _, err = run_git("add", rel_path)
+        if code != 0:
+            log.error(f"git add {rel_path} failed: {err}")
+            return
 
     # Nothing staged? — another run already committed the same change
     code, _, _ = run_git("diff", "--cached", "--quiet")
@@ -152,50 +154,75 @@ def check_and_switch() -> None:
         sys.exit(1)
 
     current_key: str = voice_data.get("elevenlabs_api_key", "")
-    all_keys: list = api_keys_data.get("api_keys", [])
+    raw_entries: list = api_keys_data.get("api_keys", [])
 
-    if not all_keys:
-        log.error("No API keys found in api_keys.json.") 
+    if not raw_entries:
+        log.error("No API keys found in api_keys.json.")
         sys.exit(1)
 
     if not current_key:
         log.error("No elevenlabs_api_key set in voice_changer.json.")
         sys.exit(1)
 
-    # Check current key balance
-    remaining = get_remaining_characters(current_key)
-    log.info(f"Active key (...{current_key[-6:]}): {remaining:,} characters remaining.")
+    # Normalise entries: accept both plain strings and {"key": ..., "value": ...} objects
+    entries: list[dict] = [
+        e if isinstance(e, dict) else {"key": e, "value": -1}
+        for e in raw_entries
+    ]
 
-    if remaining >= LOW_BALANCE_THRESHOLD:
-        log.info(f"Balance is sufficient (≥ {LOW_BALANCE_THRESHOLD:,}). No switch needed.")
+    # ── Check ALL keys and update their value ────────────────────────────────
+    new_key: str | None = None
+    current_remaining: int = -1
+
+    for entry in entries:
+        k = entry["key"]
+        bal = get_remaining_characters(k)
+        entry["value"] = bal
+        label = "(active) " if k == current_key else ""
+        log.info(f"  {label}Key ...{k[-6:]}: {bal:,} characters remaining.")
+        if k == current_key:
+            current_remaining = bal
+
+    # Save updated balances to api_keys.json every run
+    api_keys_data["api_keys"] = entries
+    save_json(API_KEYS_PATH, api_keys_data)
+    log.info("api_keys.json balances updated.")
+
+    api_keys_rel = API_KEYS_PATH.relative_to(BASE_DIR).as_posix()
+    voice_rel    = VOICE_CHANGER_PATH.relative_to(BASE_DIR).as_posix()
+
+    if current_remaining >= LOW_BALANCE_THRESHOLD:
+        log.info(f"Active key balance {current_remaining:,} is sufficient (≥ {LOW_BALANCE_THRESHOLD:,}). No switch needed.")
+        git_commit_and_push("chore: update API key balances [skip ci]", api_keys_rel)
         return
 
     log.warning(
-        f"Balance {remaining:,} is below threshold {LOW_BALANCE_THRESHOLD:,}. "
-        "Scanning all keys for a better one..."
+        f"Active key balance {current_remaining:,} is below threshold {LOW_BALANCE_THRESHOLD:,}. "
+        "Switching to first sufficient key..."
     )
 
-    # Check keys one by one and switch to the first one with enough balance
-    for key in all_keys:
-        if key == current_key:
+    for entry in entries:
+        if entry["key"] == current_key:
             continue
-        key_remaining = get_remaining_characters(key)
-        log.info(f"  Key ...{key[-6:]}: {key_remaining:,} characters remaining.")
-        if key_remaining >= LOW_BALANCE_THRESHOLD:
+        if entry["value"] >= LOW_BALANCE_THRESHOLD:
+            new_key = entry["key"]
             log.info(
-                f"Switching from key ...{current_key[-6:]} "
-                f"to key ...{key[-6:]} ({key_remaining:,} chars remaining)."
+                f"Switching from ...{current_key[-6:]} "
+                f"to ...{new_key[-6:]} ({entry['value']:,} chars remaining)."
             )
-            voice_data["elevenlabs_api_key"] = key
+            voice_data["elevenlabs_api_key"] = new_key
             save_json(VOICE_CHANGER_PATH, voice_data)
             log.info("voice_changer.json updated.")
             git_commit_and_push(
-                f"chore: rotate ElevenLabs key → ...{key[-6:]} "
-                f"({key_remaining:,} chars) [skip ci]"
+                f"chore: rotate ElevenLabs key → ...{new_key[-6:]} "
+                f"({entry['value']:,} chars), update balances [skip ci]",
+                voice_rel,
+                api_keys_rel,
             )
             return
 
     log.warning("No key with sufficient balance found. Keeping current key.")
+    git_commit_and_push("chore: update API key balances [skip ci]", api_keys_rel)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
