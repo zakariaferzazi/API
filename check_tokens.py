@@ -175,35 +175,27 @@ def check_and_switch() -> None:
         "Scanning all keys for a better one..."
     )
 
-    # Find the key with the highest remaining balance
-    best_key: str | None = None
-    best_remaining: int = remaining
-
+    # Check keys one by one and switch to the first one with enough balance
     for key in all_keys:
         if key == current_key:
             continue
         key_remaining = get_remaining_characters(key)
         log.info(f"  Key ...{key[-6:]}: {key_remaining:,} characters remaining.")
-        if key_remaining > best_remaining:
-            best_remaining = key_remaining
-            best_key = key
+        if key_remaining >= LOW_BALANCE_THRESHOLD:
+            log.info(
+                f"Switching from key ...{current_key[-6:]} "
+                f"to key ...{key[-6:]} ({key_remaining:,} chars remaining)."
+            )
+            voice_data["elevenlabs_api_key"] = key
+            save_json(VOICE_CHANGER_PATH, voice_data)
+            log.info("voice_changer.json updated.")
+            git_commit_and_push(
+                f"chore: rotate ElevenLabs key → ...{key[-6:]} "
+                f"({key_remaining:,} chars) [skip ci]"
+            )
+            return
 
-    if best_key is None:
-        log.warning("No key with a higher balance found. Keeping current key.")
-        return
-
-    log.info(
-        f"Switching from key ...{current_key[-6:]} "
-        f"to key ...{best_key[-6:]} ({best_remaining:,} chars remaining)."
-    )
-    voice_data["elevenlabs_api_key"] = best_key
-    save_json(VOICE_CHANGER_PATH, voice_data)
-    log.info("voice_changer.json updated.")
-
-    git_commit_and_push(
-        f"chore: rotate ElevenLabs key → ...{best_key[-6:]} "
-        f"({best_remaining:,} chars) [skip ci]"
-    )
+    log.warning("No key with sufficient balance found. Keeping current key.")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

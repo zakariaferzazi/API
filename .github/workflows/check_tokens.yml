@@ -37,20 +37,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # api_keys.json is gitignored. Recreate it here from a repository secret.
-      # Go to: Settings → Secrets and variables → Actions → New repository secret
-      # Name : API_KEYS_JSON
-      # Value: the full JSON content, e.g. {"api_keys":["sk_key1","sk_key2",...]}
-      - name: Create api_keys.json from secret
-        env:
-          API_KEYS_JSON: ${{ secrets.API_KEYS_JSON }}
-        run: |
-          if [ -z "$API_KEYS_JSON" ]; then
-            echo "::error::API_KEYS_JSON secret is not set. Go to Settings → Secrets and variables → Actions and add it."
-            exit 1
-          fi
-          echo "$API_KEYS_JSON" > api_keys.json
-
       - name: Configure git identity
         run: |
           git config user.name  "github-actions[bot]"
