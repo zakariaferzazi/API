@@ -180,6 +180,7 @@ def check_and_switch() -> None:
         entry["value"] = bal
         label = "(active) " if k == current_key else ""
         log.info(f"  {label}Key ...{k[-6:]}: {bal:,} characters remaining.")
+        print(f"  {label}Key ...{k[-6:]}: {bal:,} characters remaining.")
         if k == current_key:
             current_remaining = bal
 
