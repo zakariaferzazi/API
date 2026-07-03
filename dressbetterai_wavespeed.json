@@ -1,4 +1,4 @@
 {
   "model": "pruna-ai/p-image/edit",
-  "prompt": "Change the figure 1 man's suit to the clothes in figure 2. Create a full-body portrait. Show the entire person from head to toe. The subject must be fully visible in the frame with shoes and legs visible. Expand the composition beyond the original crop if necessary. Figure 2 is a clothing reference only. Use it only for garment appearance, colors, materials, and style. Ignore its composition, framing, pose, camera angle, crop, background, and person. The final image composition must be determined entirely by Figure 1."
+  "prompt": "Use Figure 1 only as an identity reference. Do not preserve the original crop or framing. Generate a completely new full-body fashion photo of the same person. Preserve only the facial identity, hairstyle, skin tone, and age. Show the entire body from head to toe. The outfit must match Figure 2 exactly."
 }
