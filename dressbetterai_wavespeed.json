@@ -1,4 +1,4 @@
 {
   "model": "pruna-ai/p-image/edit",
-  "prompt": "Change the figure 1 man's suit to the clothes in figure 2."
+  "prompt": "Use the person in Figure 1 as the identity reference only. Preserve the exact face, hairstyle, skin tone, and facial features. Generate a realistic full-body portrait of the same person wearing the outfit shown in Figure 2. Match the outfit's colors, style, fit, and clothing items exactly. Do not use the person from Figure 2. Do not crop the face. Keep the face clearly visible and consistent with Figure 1."
 }
