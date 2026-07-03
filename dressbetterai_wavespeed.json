@@ -1,4 +1,4 @@
 {
   "model": "pruna-ai/p-image/edit",
-  "prompt": "Change the figure 1 man's suit to the clothes in figure 2. Create a full-body portrait. Show the entire person from head to toe. The subject must be fully visible in the frame with shoes and legs visible. Expand the composition beyond the original crop if necessary."
+  "prompt": "Change the figure 1 man's suit to the clothes in figure 2."
 }
